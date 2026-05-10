@@ -46,12 +46,30 @@ Do not share a real `.env` file with API keys.
 
 One-command local start/stop:
 
+macOS / Linux:
+
 ```bash
 ./scripts/start.sh
 ./scripts/stop.sh
 ```
 
+Windows Command Prompt:
+
+```bat
+scripts\start.bat
+scripts\stop.bat
+```
+
+Windows PowerShell:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\app.ps1 start
+powershell -ExecutionPolicy Bypass -File scripts\app.ps1 stop
+```
+
 Or use the management script:
+
+macOS / Linux:
 
 ```bash
 ./scripts/app.sh setup
@@ -60,6 +78,17 @@ Or use the management script:
 ./scripts/app.sh restart
 ./scripts/app.sh status
 ./scripts/app.sh logs
+```
+
+Windows:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\app.ps1 setup
+powershell -ExecutionPolicy Bypass -File scripts\app.ps1 start
+powershell -ExecutionPolicy Bypass -File scripts\app.ps1 stop
+powershell -ExecutionPolicy Bypass -File scripts\app.ps1 restart
+powershell -ExecutionPolicy Bypass -File scripts\app.ps1 status
+powershell -ExecutionPolicy Bypass -File scripts\app.ps1 logs
 ```
 
 `start` automatically runs the first-time setup if `.venv` or `node_modules` is missing.
