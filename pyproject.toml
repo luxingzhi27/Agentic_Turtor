@@ -1,0 +1,26 @@
+[project]
+name = "action-oriented-agentic-tutor"
+version = "0.1.0"
+description = "Lightweight Web prototype for an action-oriented agentic tutor."
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    "beautifulsoup4>=4.12.3",
+    "chromadb>=0.5.23",
+    "fastapi>=0.115.6",
+    "httpx>=0.28.1",
+    "pydantic>=2.10.4",
+    "pypdf>=5.1.0",
+    "python-multipart>=0.0.20",
+    "uvicorn[standard]>=0.34.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.4",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["backend/tests"]
+pythonpath = ["backend"]
+

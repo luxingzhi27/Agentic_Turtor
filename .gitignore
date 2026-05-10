@@ -1,0 +1,13 @@
+.DS_Store
+.venv/
+.uv-cache/
+.uv-python/
+.env
+__pycache__/
+.pytest_cache/
+node_modules/
+dist/
+frontend/dist/
+data/chroma/
+data/demo-cache/
+.run/
