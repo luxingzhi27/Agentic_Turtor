@@ -87,6 +87,26 @@ is_running() {
   [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null
 }
 
+port_pid() {
+  local port="$1"
+  if ! command -v lsof >/dev/null 2>&1; then
+    return 1
+  fi
+  lsof -tiTCP:"$port" -sTCP:LISTEN 2>/dev/null | head -n 1
+}
+
+ensure_port_free() {
+  local name="$1"
+  local port="$2"
+  local pid
+  pid="$(port_pid "$port" || true)"
+  if [[ -n "$pid" ]]; then
+    echo "Cannot start $name: port $port is already used by pid $pid."
+    echo "Run './scripts/app.sh stop' or stop that process first."
+    exit 1
+  fi
+}
+
 stop_pid() {
   local name="$1"
   local pid_file="$2"
@@ -115,21 +135,38 @@ stop_pid() {
   rm -f "$pid_file"
 }
 
+stop_port_if_orphaned() {
+  local name="$1"
+  local port="$2"
+  local pid_file="$3"
+  local pid
+  pid="$(port_pid "$port" || true)"
+  if [[ -z "$pid" ]]; then
+    return
+  fi
+  if [[ -f "$pid_file" ]] && [[ "$(cat "$pid_file")" == "$pid" ]]; then
+    return
+  fi
+
+  echo "Stopping orphaned $name process on port $port (pid $pid)..."
+  kill "$pid" 2>/dev/null || true
+}
+
 start_backend() {
   if is_running "$BACKEND_PID_FILE"; then
     echo "Backend is already running (pid $(cat "$BACKEND_PID_FILE"))."
     return
   fi
+  ensure_port_free "backend" "$BACKEND_PORT"
 
   echo "Starting backend on http://127.0.0.1:$BACKEND_PORT ..."
-  (
-    cd "$ROOT_DIR"
-    uv --cache-dir .uv-cache run uvicorn app.main:app \
-      --app-dir backend \
-      --host 127.0.0.1 \
-      --port "$BACKEND_PORT"
-  ) >"$LOG_DIR/backend.log" 2>&1 &
+  pushd "$ROOT_DIR" >/dev/null
+  nohup "$ROOT_DIR/.venv/bin/uvicorn" app.main:app \
+    --app-dir backend \
+    --host 127.0.0.1 \
+    --port "$BACKEND_PORT" >"$LOG_DIR/backend.log" 2>&1 &
   echo $! >"$BACKEND_PID_FILE"
+  popd >/dev/null
 }
 
 start_frontend() {
@@ -137,13 +174,13 @@ start_frontend() {
     echo "Frontend is already running (pid $(cat "$FRONTEND_PID_FILE"))."
     return
   fi
+  ensure_port_free "frontend" "$FRONTEND_PORT"
 
   echo "Starting frontend on http://127.0.0.1:$FRONTEND_PORT ..."
-  (
-    cd "$ROOT_DIR/frontend"
-    npm run dev -- --host 127.0.0.1 --port "$FRONTEND_PORT"
-  ) >"$LOG_DIR/frontend.log" 2>&1 &
+  pushd "$ROOT_DIR/frontend" >/dev/null
+  nohup "$ROOT_DIR/frontend/node_modules/.bin/vite" --host 127.0.0.1 --port "$FRONTEND_PORT" >"$LOG_DIR/frontend.log" 2>&1 &
   echo $! >"$FRONTEND_PID_FILE"
+  popd >/dev/null
 }
 
 start_all() {
@@ -160,6 +197,8 @@ start_all() {
 stop_all() {
   stop_pid "frontend" "$FRONTEND_PID_FILE"
   stop_pid "backend" "$BACKEND_PID_FILE"
+  stop_port_if_orphaned "frontend" "$FRONTEND_PORT" "$FRONTEND_PID_FILE"
+  stop_port_if_orphaned "backend" "$BACKEND_PORT" "$BACKEND_PID_FILE"
 }
 
 status_all() {
